@@ -7,6 +7,8 @@ Set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 add_subdirectory(lib/glfw)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 add_executable(tv-host src/main.cpp)
 target_link_libraries(tv-host glfw)
 
