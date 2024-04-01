@@ -1,0 +1,2 @@
+cmake -B build -G Ninja .
+ninja -C build 2>&1 | tee build-out.log
