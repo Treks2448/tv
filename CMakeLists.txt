@@ -10,15 +10,24 @@ Set(CMAKE_CXX_STANDARD 23)
 Set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-
 # Add our code
 add_executable(tv-host src/main.cpp)
 
 # Add glfw libraries
 add_subdirectory(lib/glfw)
 
+#Maybe not needed libraries
+if(APPLE)
+    list(APPEND EXTRA_LIBS "-framework OpenGL")
+elseif(WIN32)
+    list(APPEND EXTRA_LIBS "-lglu32 -lopengl32")
+    set(CMAKE_EXE_LINKER_FLAGS "-std=gnu99 -static -static-libgcc -static-libstdc++ -mwindows")
+else()
+    list(APPEND EXTRA_LIBS "-lGL -lGLU -lX11")  
+endif()
+
 # Link libraries
-target_link_libraries(tv-host PUBLIC glfw)
+target_link_libraries(tv-host PUBLIC glfw ${EXTRA_LIBS})
 
 # Set compiler flags for libraries
 target_compile_options(glfw PRIVATE -O3)
