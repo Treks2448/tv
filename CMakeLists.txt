@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.28.3)
 
-set(CMAKE_C_COMPILER "usr/bin/clang")
-set(CMAKE_CXX_COMPILER "usr/bin/clang")
+set(CMAKE_C_COMPILER "/usr/bin/clang")
+set(CMAKE_CXX_COMPILER "/usr/bin/clang")
 
 project(tv VERSION 1.0 LANGUAGES CXX)
 
@@ -9,6 +9,7 @@ project(tv VERSION 1.0 LANGUAGES CXX)
 Set(CMAKE_CXX_STANDARD 23)
 Set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 
 # Add our code
 add_executable(tv-host src/main.cpp)
