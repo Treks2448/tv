@@ -9,10 +9,18 @@ project(tv VERSION 1.0 LANGUAGES CXX)
 Set(CMAKE_CXX_STANDARD 23)
 Set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-add_compile_options(-Wall -Wextra -Wpedantic -O3)
 
+# Add our code
+add_executable(tv-host src/main.cpp)
+
+# Add glfw libraries
 add_subdirectory(lib/glfw)
 
-add_executable(tv-host src/main.cpp)
-target_link_libraries(tv-host glfw)
+# Link libraries
+target_link_libraries(tv-host PUBLIC glfw)
 
+# Set compiler flags for our code
+target_compile_options(tv-host PRIVATE -Wall -Wextra -Wpedantic -Werror)
+
+# Set global compiler flags
+add_compile_options(-O3)
