@@ -20,7 +20,7 @@ add_subdirectory(lib/glfw)
 target_link_libraries(tv-host PUBLIC glfw)
 
 # Set compiler flags for our code
-target_compile_options(tv-host PRIVATE -Wall -Wextra -Wpedantic -Werror)
+target_compile_options(tv-host PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Werror)
 
 # Set global compiler flags
 add_compile_options(-O3)
