@@ -16,7 +16,7 @@ add_executable(tv-host src/main.cpp)
 # Add glfw libraries
 add_subdirectory(lib/glfw)
 
-#Maybe not needed libraries
+# Maybe not needed libraries
 if(APPLE)
     list(APPEND EXTRA_LIBS "-framework OpenGL")
 elseif(WIN32)
@@ -26,11 +26,24 @@ else()
     list(APPEND EXTRA_LIBS "-lGL -lGLU -lX11")  
 endif()
 
+# Add ffmpeg libraries
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBAV REQUIRED IMPORTED_TARGET
+  libavdevice
+  libavfilter
+  libavformat
+  libavcodec
+  libswresample
+  libswscale
+  libavutil
+)
+
 # Link libraries
-target_link_libraries(tv-host PUBLIC glfw ${EXTRA_LIBS})
+target_link_libraries(tv-host PUBLIC glfw ${EXTRA_LIBS} PkgConfig::LIBAV)
 
 # Set compiler flags for libraries
 target_compile_options(glfw PRIVATE -O3)
+# target_compile_options(PkgConfig::LIBAV -O3)
 
 # Set compiler flags for our code
 target_compile_options(tv-host PRIVATE -O3 -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Werror)
