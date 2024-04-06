@@ -22,12 +22,11 @@ int main() {
   glfwMakeContextCurrent(window);
 
   while (!glfwWindowShouldClose(window)) {
-    // keep running
-  }
-  if (glfwWindowShouldClose(window)) {
-    glfwDestroyWindow(window);
+    glfwPollEvents(); 
   }
 
+    
+  glfwDestroyWindow(window);
   glfwTerminate();
   return 0;
 }
