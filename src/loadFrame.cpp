@@ -1,3 +1,4 @@
+#include <libavutil/pixfmt.h>
 extern "C" {
   #include <libavcodec/packet.h>
   #include <libavutil/error.h>
@@ -7,6 +8,7 @@ extern "C" {
   #include <libavutil/avutil.h>
   #include <libavcodec/codec_par.h>
   #include <libavutil/imgutils.h>
+  #include <libswscale/swscale.h>
 }
 
 #include <string>
@@ -29,8 +31,6 @@ int init(std::string filename, int& width, int& height, uint8_t** RGB_frame_buf,
   // Get format context
   ret = avformat_open_input(&fmt_ctx, filename.c_str(), NULL, NULL);
   ret = avformat_find_stream_info(fmt_ctx, NULL);
-
-  //open_codec_context(&vid_str_idx, dec_ctx, fmt_ctx, AVMEDIA_TYPE_VIDEO);
 
   // get video stream and respective index
   vid_str_idx = av_find_best_stream(fmt_ctx, type, -1, -1, NULL, 0);
@@ -56,17 +56,6 @@ int init(std::string filename, int& width, int& height, uint8_t** RGB_frame_buf,
   // Repeatedly read video packets/frames from file
   ret = 0;
   while (ret >= 0) {
-    // send packet
-    // if packet is video packet
-    //  while (no issue with receiving/decoding frames) 
-    //    receive frame
-    //    if valid video frame
-    //      copy frame to buffer 
-    //    else if end of file 
-    //      break out of whole loop
-    //    else if EAGAIN
-    //      break out of inner loop
-    // unref packet
     ret = av_read_frame(fmt_ctx, packet);
     if (ret >= 0 && packet->stream_index != vid_str_idx) {
       av_packet_unref(packet);
@@ -98,53 +87,49 @@ int init(std::string filename, int& width, int& height, uint8_t** RGB_frame_buf,
         std::cout << "Error decoding frame. Error: " << ret << "\n";
         break;
       }
+      
+      
+      uint8_t *src_data[4], *dst_data[4];
+      int src_linesize[4], dst_linesize[4];
+      AVPixelFormat dst_pix_fmt = AV_PIX_FMT_RGB24;
+      SwsContext *sws_ctx;
+      
+      sws_ctx = sws_getContext(width, 
+                               height, 
+                               dec_ctx->pix_fmt, 
+                               width, 
+                               height, 
+                               dst_pix_fmt, 
+                               SWS_BILINEAR, 
+                               NULL, 
+                               NULL, 
+                               NULL);
 
-      ret = av_image_copy_to_buffer(*RGB_frame_buf,
-                                    RGB_frame_buf_size,
-                                    const_cast<const uint8_t * const *>(frame->data),
-                                    const_cast<const int*>(frame->linesize), 
-                                    dec_ctx->pix_fmt, 
-                                    frame->width, 
-                                    frame->height,
-                                    1);
+      av_image_alloc(src_data, src_linesize, width, height, dec_ctx->pix_fmt, 16);
+      av_image_alloc(dst_data, dst_linesize, width, height, dst_pix_fmt, 1);
+      sws_scale(sws_ctx, 
+                const_cast<const uint8_t * const *>(frame->data),
+                src_linesize,
+                0,
+                height,
+                dst_data,
+                dst_linesize);
+
+      //ret = av_image_copy_to_buffer(*RGB_frame_buf,
+      //                              RGB_frame_buf_size,
+      //                              const_cast<const uint8_t * const *>(frame->data),
+      //                              const_cast<const int*>(frame->linesize), 
+      //                              dec_ctx->pix_fmt, 
+      //                              frame->width, 
+      //                              frame->height,
+      //                              1);
       
       if (ret < 0) {
         std::cout << "Error copying frame to buffer. Error: " << ret << "\n";
         return 1;
       }
       av_frame_unref(frame);
-    }
-    
-    //if (packet->stream_index == vid_str_idx){
-    //  ret = avcodec_send_packet(dec_ctx, packet);
-    //  while (ret >= 0) {
-    //    ret = avcodec_receive_frame(dec_ctx, frame);
-    //    switch (ret) {
-    //      case 0:
-    //        ret = av_image_copy_to_buffer(*RGB_frame_buf,
-    //                                      RGB_frame_buf_size,
-    //                                      const_cast<const uint8_t * const *>(frame->data),
-    //                                      frame->linesize, 
-    //                                      dec_ctx->pix_fmt, 
-    //                                      frame->width, 
-    //                                      frame->height,
-    //                                      1);
-    //        av_frame_unref(frame);
-    //        continue;
-    //      case AVERROR_EOF:
-    //        //goto finish
-    //      case AVERROR(EAGAIN):
-    //        ret = 0;
-    //        av_frame_unref(frame);
-    //        break;
-    //      default:
-    //        std::cout << "oops";
-    //        return 1;
-    //    }
-    //    break;
-    //  }
-    //}
-    //av_packet_unref(packet);
+    }  
   }
 
 finish:
