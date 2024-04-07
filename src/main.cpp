@@ -1,11 +1,21 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 
+#include "loadFrame.cpp"
+
+int init(std::string filename, int& width, int& height, uint8_t** RGB_frame_buf, int& RGB_frame_buf_size);
+
 void error_callback(int error, const char *description) {
   fprintf(stderr, "Error: %d: %s\n", error, description);
 }
 
 int main() {
+  int width;
+  int height;
+  uint8_t* RGB_pix_buf = nullptr;
+  int RGB_pix_buf_size = 0;
+  init("/home/igor/media/JuOn-The-Grudge (2002)/JuOn-The-Grudge.mp4", width, height, &RGB_pix_buf, RGB_pix_buf_size); 
+
   if (!glfwInit()) {
     return 1;
   }
