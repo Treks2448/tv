@@ -24,10 +24,12 @@ int init(std::string filename, int& width, int& height, uint8_t** RGB_frame_buf,
   AVStream* vid_str = nullptr;
   AVFrame* frame = nullptr;
   AVPacket* packet = nullptr;
+  SwsContext *sws_ctx = nullptr;
+  uint8_t *src_data[4], *dst_data[4];
+  int src_linesize[4], dst_linesize[4];
   const AVMediaType type{AVMEDIA_TYPE_VIDEO};
-  //const AVPixelFormat pix_fmt{AV_PIX_FMT_RGBA};
-  int vid_str_idx = 0; 
-  
+  AVPixelFormat dst_pix_fmt{AV_PIX_FMT_RGB24};
+  int vid_str_idx = 0;  
   // Get format context
   ret = avformat_open_input(&fmt_ctx, filename.c_str(), NULL, NULL);
   ret = avformat_find_stream_info(fmt_ctx, NULL);
@@ -50,9 +52,22 @@ int init(std::string filename, int& width, int& height, uint8_t** RGB_frame_buf,
   packet = av_packet_alloc();
 
   RGB_frame_buf_size = av_image_get_buffer_size(dec_ctx->pix_fmt, width, height, 16);
-  //*RGB_frame_buf = new uint8_t[static_cast<size_t>(RGB_frame_buf_size)];
-  *RGB_frame_buf = reinterpret_cast<uint8_t*>(av_malloc(static_cast<size_t>(RGB_frame_buf_size)));
+  av_image_alloc(src_data, src_linesize, width, height, dec_ctx->pix_fmt, 16);
+  av_image_alloc(dst_data, dst_linesize, width, height, dst_pix_fmt, 1);
   
+  *RGB_frame_buf = dst_data[0];
+
+  sws_ctx = sws_getContext(width, 
+                           height, 
+                           dec_ctx->pix_fmt, 
+                           width, 
+                           height, 
+                           dst_pix_fmt, 
+                           SWS_BILINEAR, 
+                           NULL, 
+                           NULL, 
+                           NULL);
+
   // Repeatedly read video packets/frames from file
   ret = 0;
   while (ret >= 0) {
@@ -73,7 +88,7 @@ int init(std::string filename, int& width, int& height, uint8_t** RGB_frame_buf,
       std::cout << "Error submitting packet for decoding\n";
       return 1;
     }
-
+     
     while (ret >= 0) {
       ret = avcodec_receive_frame(dec_ctx, frame);
       if (ret == AVERROR_EOF) {
@@ -87,26 +102,7 @@ int init(std::string filename, int& width, int& height, uint8_t** RGB_frame_buf,
         std::cout << "Error decoding frame. Error: " << ret << "\n";
         break;
       }
-      
-      
-      uint8_t *src_data[4], *dst_data[4];
-      int src_linesize[4], dst_linesize[4];
-      AVPixelFormat dst_pix_fmt = AV_PIX_FMT_RGB24;
-      SwsContext *sws_ctx;
-      
-      sws_ctx = sws_getContext(width, 
-                               height, 
-                               dec_ctx->pix_fmt, 
-                               width, 
-                               height, 
-                               dst_pix_fmt, 
-                               SWS_BILINEAR, 
-                               NULL, 
-                               NULL, 
-                               NULL);
-
-      av_image_alloc(src_data, src_linesize, width, height, dec_ctx->pix_fmt, 16);
-      av_image_alloc(dst_data, dst_linesize, width, height, dst_pix_fmt, 1);
+       
       sws_scale(sws_ctx, 
                 const_cast<const uint8_t * const *>(frame->data),
                 src_linesize,
@@ -114,15 +110,6 @@ int init(std::string filename, int& width, int& height, uint8_t** RGB_frame_buf,
                 height,
                 dst_data,
                 dst_linesize);
-
-      //ret = av_image_copy_to_buffer(*RGB_frame_buf,
-      //                              RGB_frame_buf_size,
-      //                              const_cast<const uint8_t * const *>(frame->data),
-      //                              const_cast<const int*>(frame->linesize), 
-      //                              dec_ctx->pix_fmt, 
-      //                              frame->width, 
-      //                              frame->height,
-      //                              1);
       
       if (ret < 0) {
         std::cout << "Error copying frame to buffer. Error: " << ret << "\n";
@@ -135,7 +122,8 @@ int init(std::string filename, int& width, int& height, uint8_t** RGB_frame_buf,
 finish:
  
   // TODO: these need to be moved to a different function than init
-  // av_freep(RGB_frame_buf);
+  // av_freep(src_data);
+  // av_freep(dst_data);
   avcodec_free_context(&dec_ctx);
   avformat_close_input(&fmt_ctx);
   av_packet_free(&packet);
