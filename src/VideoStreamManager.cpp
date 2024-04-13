@@ -1,7 +1,10 @@
 #include "VideoStreamManager.h"
+#include <libavutil/pixfmt.h>
 
-#include <iostream>
+extern "C" 
+{
 #include <libavutil/frame.h>
+} // extern "C"
 
 VideoStreamManager::VideoStreamManager(const std::string& filename, int outBufWidth, int outBufHeight)
   :
@@ -24,16 +27,33 @@ VideoStreamManager::VideoStreamManager(const std::string& filename, int outBufWi
   ret = avcodec_open2(dec_ctx, dec, NULL);
 
   // Set video params for later use
-  int src_width = dec_ctx->width;
-  int src_height = dec_ctx->height; 
-
+  src_width = dec_ctx->width;
+  src_height = dec_ctx->height; 
+ 
   frame = av_frame_alloc();
   packet = av_packet_alloc();
- 
+  
+  // temporary for testing
+  frame_buf_width = src_width;
+  frame_buf_height = src_height;
+  
   // allocate buffers to store video data
-  RGB_frame_buf_size = av_image_get_buffer_size(dec_ctx->pix_fmt, frame_buf_width, frame_buf_height, 16);
+  RGB_frame_buf_size = av_image_get_buffer_size(dec_ctx->pix_fmt, src_width, src_height, 16);
   av_image_alloc(src_data, src_linesize, src_width, src_height, dec_ctx->pix_fmt, 16);
   av_image_alloc(RGB_frame_buf, RGB_frame_buf_linesize, frame_buf_width, frame_buf_height, AV_PIX_FMT_RGB24, 1); 
+  //RGB_frame_buf_size = av_image_get_buffer_size(AV_PIX_FMT_RGB24, frame_buf_width, frame_buf_height, 1);
+
+  sws_ctx = sws_getContext(src_width, 
+                           src_height, 
+                           dec_ctx->pix_fmt, 
+                           frame_buf_width, 
+                           frame_buf_height, 
+                           AV_PIX_FMT_RGB24, 
+                           SWS_BILINEAR, 
+                           NULL, 
+                           NULL, 
+                           NULL);
+
 }
 
 VideoStreamManager::~VideoStreamManager() {
@@ -43,42 +63,4 @@ VideoStreamManager::~VideoStreamManager() {
   av_packet_free(&packet);
   avcodec_free_context(&dec_ctx);
   avformat_close_input(&fmt_ctx);
-}
-
-inline int VideoStreamManager::readAndDecodeNextPacket() {
-  int ret = 0; 
-  if((ret = av_read_frame(fmt_ctx, packet)) < 0) {
-    std::cout << "Error reading frame\n";
-    return ret;
-  }
-  if ((ret = avcodec_send_packet(dec_ctx, packet)) < 0) {
-    std::cout << "Error submitting packet for decoding\n";
-    return ret;
-  }
-  return packet->stream_index;
-}
-
-inline void VideoStreamManager::unrefPacket() {
-  av_packet_unref(packet); 
-}
-
-inline int VideoStreamManager::nextVideoFrame() {
-  int ret = avcodec_receive_frame(dec_ctx, frame);
-  if (ret == AVERROR_EOF | ret == AVERROR(EAGAIN) | ret < 0) {
-    return ret;
-  }
-   
-  sws_scale(sws_ctx, 
-            const_cast<const uint8_t * const *>(frame->data),
-            src_linesize,
-            0,
-            src_height,
-            RGB_frame_buf,
-            RGB_frame_buf_linesize);
-
-  return 0;
-}
-
-inline void VideoStreamManager::unrefFrame() {
-  av_frame_unref(frame);
 }

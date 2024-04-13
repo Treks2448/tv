@@ -111,10 +111,6 @@ int init(std::string filename, int& width, int& height, uint8_t** RGB_frame_buf,
                 dst_data,
                 dst_linesize);
       
-      if (ret < 0) {
-        std::cout << "Error copying frame to buffer. Error: " << ret << "\n";
-        return 1;
-      }
       av_frame_unref(frame);
     }  
   }
