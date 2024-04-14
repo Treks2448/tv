@@ -1,10 +1,12 @@
 #include "VideoStreamManager.h"
-#include <libavutil/pixfmt.h>
 
 extern "C" 
 {
+#include <libavutil/pixfmt.h>
 #include <libavutil/frame.h>
 } // extern "C"
+
+#include <iostream>
 
 VideoStreamManager::VideoStreamManager(const std::string& filename, int outBufWidth, int outBufHeight)
   :
@@ -38,10 +40,22 @@ VideoStreamManager::VideoStreamManager(const std::string& filename, int outBufWi
   frame_buf_height = src_height;
   
   // allocate buffers to store video data
-  RGB_frame_buf_size = av_image_get_buffer_size(dec_ctx->pix_fmt, src_width, src_height, 16);
-  av_image_alloc(src_data, src_linesize, src_width, src_height, dec_ctx->pix_fmt, 16);
-  av_image_alloc(RGB_frame_buf, RGB_frame_buf_linesize, frame_buf_width, frame_buf_height, AV_PIX_FMT_RGB24, 1); 
-  //RGB_frame_buf_size = av_image_get_buffer_size(AV_PIX_FMT_RGB24, frame_buf_width, frame_buf_height, 1);
+  av_image_alloc(src_data, 
+                 src_linesize, 
+                 src_width, 
+                 src_height, 
+                 dec_ctx->pix_fmt, 
+                 16);
+  av_image_alloc(RGB_frame_buf, 
+                 RGB_frame_buf_linesize, 
+                 frame_buf_width, 
+                 frame_buf_height, 
+                 AV_PIX_FMT_RGB24, 
+                 1); 
+  RGB_frame_buf_size = av_image_get_buffer_size(AV_PIX_FMT_RGB24, 
+                                                frame_buf_width, 
+                                                frame_buf_height, 
+                                                1);
 
   sws_ctx = sws_getContext(src_width, 
                            src_height, 
@@ -64,3 +78,53 @@ VideoStreamManager::~VideoStreamManager() {
   avcodec_free_context(&dec_ctx);
   avformat_close_input(&fmt_ctx);
 }
+
+VideoStreamManager::ManagerState VideoStreamManager::processNextPacket() {
+    int ret = 0;
+    while (ret >= 0) {
+      ret = av_read_frame(fmt_ctx, packet);
+      if (ret >= 0 && packet->stream_index != vid_str_idx) {
+        av_packet_unref(packet);
+        continue;
+      }
+      if (ret < 0) {
+        ret = avcodec_send_packet(dec_ctx, NULL);
+      }
+      else {
+        ret = avcodec_send_packet(dec_ctx, packet);
+      }
+      av_packet_unref(packet);
+      
+      if (ret < 0) {
+        std::cout << "Error [" << ret << "]: failed to send packet to decoding.\n";
+        return ManagerState::FAILED;
+      }
+      
+      while (ret >= 0) {
+        ret = avcodec_receive_frame(dec_ctx, frame);
+        if (ret == AVERROR_EOF) {
+          return ManagerState::GOT_EOF;
+        }
+        else if (ret == AVERROR(EAGAIN)) {
+          ret = 0;
+          break;
+        }
+        else if (ret < 0) {
+          std::cout << "Error [" << ret << "]: failed to receive frame";
+          return ManagerState::FAILED;
+        }
+      
+        sws_scale(sws_ctx, 
+                  const_cast<const uint8_t * const *>(frame->data),
+                  src_linesize,
+                  0,
+                  src_height,
+                  RGB_frame_buf,
+                  RGB_frame_buf_linesize);
+
+        av_frame_unref(frame);
+        return ManagerState::GOT_VIDEO_PKT;
+      }
+    }
+    return ManagerState::FAILED;
+  }

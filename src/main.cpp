@@ -19,7 +19,7 @@ int main() {
   //init("/home/igor/media/JuOn-The-Grudge (2002)/JuOn-The-Grudge.mp4", width, height, &RGB_pix_buf, RGB_pix_buf_size); 
   VideoStreamManager videoStreamManager{filename, 1920, 1032};
 
-  videoStreamManager.processNextPacket();
+  VideoStreamManager::ManagerState managerState;
 
   if (!glfwInit()) {
     return 1;
@@ -37,6 +37,7 @@ int main() {
   glfwMakeContextCurrent(window);
 
   while (!glfwWindowShouldClose(window)) {
+    managerState = videoStreamManager.processNextPacket();
     glfwPollEvents(); 
   }
 
