@@ -11,10 +11,14 @@ Set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Add our code
-add_executable(tv-host src/main.cpp)
+add_executable(tv-host src/main.cpp src/VideoStreamManager.h src/VideoStreamManager.cpp)
+
+# Add glew libraries
+find_package(GLEW REQUIRED)
 
 # Add glfw libraries
 add_subdirectory(lib/glfw)
+# add_subdirectory(lib/ffmpeg)
 
 # Maybe not needed libraries
 if(APPLE)
@@ -39,11 +43,16 @@ pkg_check_modules(LIBAV REQUIRED IMPORTED_TARGET
 )
 
 # Link libraries
-target_link_libraries(tv-host PUBLIC glfw ${EXTRA_LIBS} PkgConfig::LIBAV)
+target_link_libraries(tv-host PUBLIC glfw ${EXTRA_LIBS} PkgConfig::LIBAV GLEW::GLEW)
 
 # Set compiler flags for libraries
-target_compile_options(glfw PRIVATE -O3)
+target_compile_options(glfw PRIVATE -g )
 # target_compile_options(PkgConfig::LIBAV -O3)
+# target_compile_options(GLEW::GLEW)
 
 # Set compiler flags for our code
-target_compile_options(tv-host PRIVATE -O3 -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Werror)
+target_compile_options(tv-host PRIVATE 
+  # Set
+  -g  -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Werror 
+  # Unset
+  -Wno-unused-but-set-variable -Wno-unused-private-field)
