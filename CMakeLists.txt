@@ -55,4 +55,6 @@ target_compile_options(tv-host PRIVATE
   # Set
   -g  -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Werror 
   # Unset
-  -Wno-unused-but-set-variable -Wno-unused-private-field)
+  -Wno-unused-but-set-variable 
+  -Wno-unused-private-field
+  -Wno-unused-variable)
