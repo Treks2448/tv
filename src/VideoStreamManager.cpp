@@ -128,3 +128,4 @@ VideoStreamManager::ManagerState VideoStreamManager::processNextPacket() {
     }
     return ManagerState::FAILED;
   }
+

@@ -33,6 +33,9 @@ public:
   ~VideoStreamManager();
 
   VideoStreamManager::ManagerState processNextPacket();
+  inline uint8_t* getRGBBuffer() {
+    return RGB_frame_buf[0];
+  }
  
   // deleted constructors/assignment/move operators
   VideoStreamManager() = delete;
@@ -52,8 +55,8 @@ private:
   SwsContext *sws_ctx{nullptr};
 
   // RGB buffer details
-  uint8_t* RGB_frame_buf[4];
-  int RGB_frame_buf_linesize[4];
+  uint8_t* RGB_frame_buf[4]{nullptr, nullptr, nullptr, nullptr};
+  int RGB_frame_buf_linesize[4]{0,0,0,0};
   int frame_buf_width;
   int frame_buf_height;
  
