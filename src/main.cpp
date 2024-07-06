@@ -1,3 +1,4 @@
+#include <chrono>
 #define GLEW_STATIC
 #include <GL/glew.h>
 #include <GL/gl.h>
@@ -16,16 +17,20 @@ void error_callback(int error, const char *description) {
 const char* vertexSource = R"glsl(
   #version 150 core
   in vec2 position;
+  in vec3 color;
+  out vec3 Color;
   void main() {
+    Color = color;
     gl_Position = vec4(position, 0.0, 1.0);
   }
 )glsl";
 
 const char* fragmentSource = R"glsl(
   #version 150 core 
+  in vec3 Color;
   out vec4 outColor; 
   void main() {
-      outColor = vec4(1.0, 1.0, 1.0, 1.0);
+      outColor = vec4(Color, 1.0);
   }
 )glsl";
 
@@ -55,9 +60,9 @@ int main() {
   
   // Shaders
   float vertices[] = {
-     0.0f,  0.5f, // Vertex 1 (X, Y)
-     0.5f, -0.5f, // Vertex 2 (X, Y)
-    -0.5f, -0.5f  // Vertex 3 (X, Y)
+     0.0f,  0.5f, 1.0, 0.0, 0.0f, // Vertex 1 (X, Y) 
+     0.5f, -0.5f, 0.0, 1.0, 0.0f, // Vertex 2 (X, Y)
+    -0.5f, -0.5f, 0.0, 0.0, 1.0f  // Vertex 3 (X, Y)
   };
 
   // Create vertex buffer object and bind (set active)
@@ -105,7 +110,7 @@ int main() {
   // Link and use program
   glLinkProgram(shaderProgram);
   glUseProgram(shaderProgram);
-
+ 
   // 
   GLuint vao;
   glGenVertexArrays(1, &vao);
@@ -114,10 +119,23 @@ int main() {
   // Specify how the input position attribute (of the vertex shader) is structured 
   // and enable the attribute position
   GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
-  glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
+  glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0);
   glEnableVertexAttribArray(posAttrib);
 
+  GLint colAttrib = glGetAttribLocation(shaderProgram, "color");
+  glEnableVertexAttribArray(colAttrib);
+  glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(2 * sizeof(float)));
+
+  auto t_start = std::chrono::high_resolution_clock::now();
+
   while (!glfwWindowShouldClose(window)) {
+    auto t_now = std::chrono::high_resolution_clock::now();
+    float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_now - t_start).count();
+    
+    // Set triangle color
+    GLint uniColor = glGetUniformLocation(shaderProgram, "triangleColor");
+    glUniform3f(uniColor, (sin(time * 4.0f) + 1.0f) / 2.0f, 0.0f, 0.0f);
+
     //managerState = videoStreamManager.processNextPacket();
     
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
