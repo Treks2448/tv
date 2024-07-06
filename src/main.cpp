@@ -106,17 +106,16 @@ int main() {
   glLinkProgram(shaderProgram);
   glUseProgram(shaderProgram);
 
-  // Specify how the input position attribute (of the vertex shader) is structured 
-  // and enable the attribute position
-  GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
-  glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
-  glEnableVertexAttribArray(posAttrib);
-  
   // 
   GLuint vao;
   glGenVertexArrays(1, &vao);
   glBindVertexArray(vao);
   
+  // Specify how the input position attribute (of the vertex shader) is structured 
+  // and enable the attribute position
+  GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
+  glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
+  glEnableVertexAttribArray(posAttrib);
 
   while (!glfwWindowShouldClose(window)) {
     //managerState = videoStreamManager.processNextPacket();
