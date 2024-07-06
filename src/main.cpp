@@ -72,11 +72,28 @@ int main() {
   GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
   glShaderSource(vertexShader, 1, &vertexSource, NULL);
   glCompileShader(vertexShader);
+
+  GLint status;
+  glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
+  if (status != GL_TRUE) {
+    std::cout << "Failed to compile vertexShader. Status: " << status << "\n";
+  }
+  else {
+    std::cout << "Compiled correctly" << "\n";
+  }
   
   // Fragment shader
   GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
   glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
   glCompileShader(fragmentShader);
+  
+  glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &status);
+  if (status != GL_TRUE) {
+    std::cout << "Failed to compile fragmentShader. Status: " << status << "\n";
+  }
+  else {
+    std::cout << "Compiled correctly" << "\n";
+  }
 
   // Create program from shaders
   GLuint shaderProgram = glCreateProgram();
@@ -103,6 +120,10 @@ int main() {
 
   while (!glfwWindowShouldClose(window)) {
     //managerState = videoStreamManager.processNextPacket();
+    
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
     glDrawArrays(GL_TRIANGLES, 0, 3);
     //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glfwSwapBuffers(window);
