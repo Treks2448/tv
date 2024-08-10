@@ -36,8 +36,8 @@ VideoStreamManager::VideoStreamManager(const std::string& filename, int outBufWi
   packet = av_packet_alloc();
   
   // temporary for testing
-  frame_buf_width = src_width;
-  frame_buf_height = src_height;
+  //frame_buf_width = src_width;
+  //frame_buf_height = src_height;
   
   // allocate buffers to store video data
   av_image_alloc(src_data, 
