@@ -192,7 +192,7 @@ int main() {
       //std::cout<<(static_cast<unsigned int>(time));
       managerState = videoStreamManager.processNextPacket();
       if (managerState == VideoStreamManager::ManagerState::GOT_VIDEO_PKT) {
-        pixels = videoStreamManager.getRGBBuffer();
+        //pixels = videoStreamManager.getRGBBuffer();
         //for (int i = 0; i < width*height*3; i+=3) {
         //  printf("{%u, %u, %u}", (int)pixels[i], (int)pixels[i+1], (int)pixels[i+2]);
         //  if (i % (3*width) == 0) {
@@ -203,8 +203,7 @@ int main() {
         // update what is drawn
       }
     }
-    
-    
+
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 

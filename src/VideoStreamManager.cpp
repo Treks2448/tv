@@ -35,17 +35,15 @@ VideoStreamManager::VideoStreamManager(const std::string& filename, int outBufWi
   frame = av_frame_alloc();
   packet = av_packet_alloc();
   
-  // temporary for testing
-  //frame_buf_width = src_width;
-  //frame_buf_height = src_height;
-  
   // allocate buffers to store video data
+  // src_linesize is not correctly calculated for some reason - frame->linesize gives the correct linesize
+  // might be to do with the last parameter to this function
   av_image_alloc(src_data, 
                  src_linesize, 
                  src_width, 
                  src_height, 
                  dec_ctx->pix_fmt, 
-                 16);
+                 32);
   av_image_alloc(RGB_frame_buf, 
                  RGB_frame_buf_linesize, 
                  frame_buf_width, 
@@ -55,7 +53,7 @@ VideoStreamManager::VideoStreamManager(const std::string& filename, int outBufWi
   RGB_frame_buf_size = av_image_get_buffer_size(AV_PIX_FMT_RGB24, 
                                                 frame_buf_width, 
                                                 frame_buf_height, 
-                                                1);
+                                                RGB_frame_buf_linesize[0]);
 
   sws_ctx = sws_getContext(src_width, 
                            src_height, 
@@ -77,6 +75,7 @@ VideoStreamManager::~VideoStreamManager() {
   av_packet_free(&packet);
   avcodec_free_context(&dec_ctx);
   avformat_close_input(&fmt_ctx);
+  sws_freeContext(sws_ctx);
 }
 
 VideoStreamManager::ManagerState VideoStreamManager::processNextPacket() {
@@ -116,7 +115,9 @@ VideoStreamManager::ManagerState VideoStreamManager::processNextPacket() {
       
         sws_scale(sws_ctx, 
                   const_cast<const uint8_t * const *>(frame->data),
-                  src_linesize,
+                  // src_linesize is not correctly calculated for some reason - use linesize from frame directly
+                  //src_linesize,
+                  frame->linesize,
                   0,
                   src_height,
                   RGB_frame_buf,

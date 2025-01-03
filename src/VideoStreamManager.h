@@ -57,6 +57,7 @@ private:
   // RGB buffer details
   uint8_t* RGB_frame_buf[4]{nullptr, nullptr, nullptr, nullptr};
   int RGB_frame_buf_linesize[4]{0,0,0,0};
+  int RGB_frame_buf_size;
   int frame_buf_width;
   int frame_buf_height;
  
@@ -66,7 +67,6 @@ private:
   int src_width;
   int src_height;
 
-  int RGB_frame_buf_size;
 
   int vid_str_idx;
 };
