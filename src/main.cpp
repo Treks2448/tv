@@ -45,12 +45,12 @@ const char* fragmentSource = R"glsl(
 
 
 int main() {
-  int win_width = 500;
-  int win_height = 300;
+  int win_width = 1920;
+  int win_height = 1080;
   int width = win_width;
   int height = win_height;
 
-  std::string filename = "/home/igor/Programming/tv/q.mp4"; 
+  std::string filename = "/home/igor/Programming/tv/x.mkv"; 
   VideoStreamManager::ManagerState managerState;
   VideoStreamManager videoStreamManager{filename, width, height};
 
@@ -184,30 +184,18 @@ int main() {
     auto t_begin = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_now - t_start).count();
     
-    // Set triangle color
-    GLint uniColor = glGetUniformLocation(shaderProgram, "triangleColor");
-    glUniform3f(uniColor, (sin(time * 4.0f) + 1.0f) / 2.0f, 0.0f, 0.0f);
-    if (time_since_last_frame > 0.01666) {
+    if (time_since_last_frame > 0.033333) {
       time_since_last_frame = 0;
-      //std::cout<<(static_cast<unsigned int>(time));
       managerState = videoStreamManager.processNextPacket();
       if (managerState == VideoStreamManager::ManagerState::GOT_VIDEO_PKT) {
-        //pixels = videoStreamManager.getRGBBuffer();
-        //for (int i = 0; i < width*height*3; i+=3) {
-        //  printf("{%u, %u, %u}", (int)pixels[i], (int)pixels[i+1], (int)pixels[i+2]);
-        //  if (i % (3*width) == 0) {
-        //    std::cout << "\n";
-        //  }
-        //}
-        //std::cout << "Next frame ***** \n\n";
-        // update what is drawn
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+        pixels = videoStreamManager.getRGBBuffer();
       }
     }
 
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glfwSwapBuffers(window);
     glfwPollEvents(); 
     auto t_end = std::chrono::high_resolution_clock::now();
