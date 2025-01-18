@@ -75,8 +75,9 @@ GLuint initShaderProgram() {
   GLuint shaderProgram = glCreateProgram();
   glAttachShader(shaderProgram, vertexShader);
   glAttachShader(shaderProgram, fragmentShader);
-
-  //glBindFragDataLocation(shaderProgram, 0, "outColor");
+  
+  // This line of code might be necessary when using a custom fbo
+  // glBindFragDataLocation(shaderProgram, fbo? , "outColor");
  
   // Link and use program
   glLinkProgram(shaderProgram);
@@ -111,48 +112,47 @@ int main() {
   glfwMakeContextCurrent(window); 
 
   glewInit();
-   
-  // Init Vertex Array Object
+ 
+  // The currently bound vertex array object store references to vbos and attributes (see below).
+  // This is primarily for organisational purposes when multiple shaders and vertex layouts are
+  // used in a program. We probably won't need this.
   GLuint vao;
   glGenVertexArrays(1, &vao);
   glBindVertexArray(vao);
 
-  // Shaders
+  // These vertices form the rectangle over which the video is displayed
   GLfloat vertices[] = {
-  //  Position    Color             Texcoords
-      -1.f,  1.f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // Top-left
-       1.f,  1.f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // Top-right
-       1.f, -1.f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, // Bottom-right
-      -1.f, -1.f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f  // Bottom-left
+  //  Position     Color values       Texture coords
+      -1.f,  1.f,  1.0f, 0.0f, 0.0f,  0.0f, 0.0f,
+       1.f,  1.f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f,
+       1.f, -1.f,  0.0f, 0.0f, 1.0f,  1.0f, 1.0f,
+      -1.f, -1.f,  1.0f, 1.0f, 1.0f,  0.0f, 1.0f
   };
-
-  // Create vertex buffer object and bind (set active)
+  // Create vertex buffer object, bind it and copy vertex data to it
   GLuint vbo;
   glGenBuffers(1, &vbo);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-  // Copy vertex array vertices to buffer 
+  // NOTE: GL_STATIC_DRAW may be inefficient - consider alternatives
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
  
-  // Create an element array
+  // Element buffer objects allow us to conrol the order in which vertices are rendered.
+  // This can reduce the number of vertices that need to be rendered by reusing vertices.
+  // Probably negligible performance impact on this application.
+  // An element buffer is drawn using glDrawElements (see main loop)
   GLuint ebo;
   glGenBuffers(1, &ebo);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 
   GLuint elements[] = {
       0, 1, 2,
       2, 3, 0
   };
-
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+  // NOTE: GL_STATIC_DRAW may be inefficient - consider alternatives
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
 
   GLuint shaderProgram = initShaderProgram();
   glUseProgram(shaderProgram);
- 
-  // TODO: this exact call is already made right after the ebo is bound; 
-  // one of these calls is likely unnecessary
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
-  
+
   // Specify how the input position attribute (of the vertex shader) is structured 
   // and enable the attribute position
   GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
@@ -167,7 +167,7 @@ int main() {
   glEnableVertexAttribArray(texAttrib);
   glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void*)(5 * sizeof(float)));
 
-  // Create texture and set some formatting options
+  // Create texture, bind it and set formatting options
   GLuint tex;
   glGenTextures(1, &tex);
   glActiveTexture(tex);
@@ -176,6 +176,8 @@ int main() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  // NOTE: Not sure if this is actually used correctly
+  glGenerateMipmap(GL_TEXTURE_2D);
 
   // Get first frame of video as pixel array and attach to texture
   uint8_t* pixels = nullptr;
@@ -190,7 +192,7 @@ int main() {
 
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
   
-  glViewport( 0, 0, width, height );
+  glViewport(0, 0, width, height );
 
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -212,10 +214,10 @@ int main() {
     glClear(GL_COLOR_BUFFER_BIT);
 
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-   
+
     glfwSwapBuffers(window);
     glfwPollEvents(); 
-   
+
     // Take time measurement at the end of the main loop
     auto t_end = std::chrono::high_resolution_clock::now();
 
@@ -226,7 +228,7 @@ int main() {
 
   // TODO: probably need to delete a bunch of other OpenGL objects here
   glDeleteFramebuffers(1, &fbo); 
-    
+ 
   glfwDestroyWindow(window);
   glfwTerminate();
   return 0;
