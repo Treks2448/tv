@@ -31,11 +31,11 @@ const char* vertexSource = R"glsl(
 )glsl";
 
 const char* fragmentSource = R"glsl(
-  #version 150 core 
+  #version 330 core 
   in vec3 Color;
   in vec2 Texcoord;
 
-  out vec4 outColor; 
+  layout(location = 0) out vec4 outColor; 
 
   uniform sampler2D tex;
   void main() {
@@ -53,9 +53,7 @@ GLuint initShaderProgram() {
   glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
   if (status != GL_TRUE) {
     std::cout << "Failed to compile vertexShader. Status: " << status << "\n";
-  }
-  else {
-    std::cout << "Compiled correctly" << "\n";
+    return 1;
   }
   
   // Fragment shader
@@ -66,9 +64,7 @@ GLuint initShaderProgram() {
   glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &status);
   if (status != GL_TRUE) {
     std::cout << "Failed to compile fragmentShader. Status: " << status << "\n";
-  }
-  else {
-    std::cout << "Compiled correctly" << "\n";
+    return 1;
   }
 
   // Create program from shaders
@@ -185,17 +181,16 @@ int main() {
   pixels = videoStreamManager.getRGBBuffer();
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
   
-  // Framebuffer
-  GLuint fbo;
-  glGenFramebuffers(1, &fbo);
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+  // Create two pixel buffers for asynchronouse DMA transfer
+  const int n_pbos = 2;
+  int pbo_index = 0;
+  GLuint pbos[n_pbos];
+  glGenBuffers(n_pbos, pbos);
+  glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos[0]);
+  glBufferData(GL_PIXEL_UNPACK_BUFFER, width * height * 3, 0, GL_STREAM_DRAW);
+  glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos[1]);
+  glBufferData(GL_PIXEL_UNPACK_BUFFER, width * height * 3, 0, GL_STREAM_DRAW);
   
-  glViewport(0, 0, width, height );
-
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
   float time_since_last_frame = 0;
   while (!glfwWindowShouldClose(window)) {
     // Take time measurement at the start of the main loop
@@ -204,9 +199,27 @@ int main() {
     //if (time_since_last_frame > 0.033333) {
       time_since_last_frame = 0;
       managerState = videoStreamManager.processNextPacket();
-      if (managerState == VideoStreamManager::ManagerState::GOT_VIDEO_PKT) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+ 
+      if (managerState == VideoStreamManager::ManagerState::GOT_VIDEO_PKT)
+      {
+        glBindTexture(GL_TEXTURE_2D, tex);
+        
+        // copy pixels from PBO to texture object
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos[pbo_index % n_pbos]);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, 0);
+        
+        // update pixels and copy to PBO
         pixels = videoStreamManager.getRGBBuffer();
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos[(pbo_index + 1) % n_pbos]);
+        GLubyte* ptr = reinterpret_cast<GLubyte*>(
+          glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY)
+        );
+        if (ptr)
+        {
+          memcpy(ptr, pixels, static_cast<size_t>(width * height * 3));
+          glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+        }
+        pbo_index = (pbo_index + 1) % n_pbos;
       }
     //}
 
@@ -214,6 +227,8 @@ int main() {
     glClear(GL_COLOR_BUFFER_BIT);
 
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    
+    glBindTexture(GL_TEXTURE_2D, 0);
 
     glfwSwapBuffers(window);
     glfwPollEvents(); 
@@ -227,7 +242,7 @@ int main() {
   }
 
   // TODO: probably need to delete a bunch of other OpenGL objects here
-  glDeleteFramebuffers(1, &fbo); 
+  //glDeleteFramebuffers(1, &fbo); 
  
   glfwDestroyWindow(window);
   glfwTerminate();
