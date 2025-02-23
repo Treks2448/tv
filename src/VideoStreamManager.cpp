@@ -20,13 +20,9 @@ VideoStreamManager::VideoStreamManager(const std::string& filename, int outBufWi
 
   // get video stream and respective index
   vid_str_idx = av_find_best_stream(fmt_ctx, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
-  vid_str = fmt_ctx->streams[vid_str_idx];
-  
-  // Filling out decoder context and decoder with appropriate data
-  dec = avcodec_find_decoder(vid_str->codecpar->codec_id);
-  dec_ctx = avcodec_alloc_context3(dec);
-  ret = avcodec_parameters_to_context(dec_ctx, vid_str->codecpar);
-  ret = avcodec_open2(dec_ctx, dec, NULL);
+
+  // Filling out decoder context with appropriate data
+  open_codec_context(vid_str_idx, &dec_ctx, AVMEDIA_TYPE_VIDEO);
 
   // Set video params for later use
   src_width = dec_ctx->width;
@@ -130,3 +126,18 @@ VideoStreamManager::ManagerState VideoStreamManager::processNextPacket() {
     return ManagerState::FAILED;
   }
 
+void VideoStreamManager::open_codec_context(
+  int str_idx,
+  AVCodecContext **dec_ctx,
+  enum AVMediaType type)
+{
+  int ret{0};
+  AVStream* str = fmt_ctx->streams[str_idx];
+  const AVCodec* dec = avcodec_find_decoder(str->codecpar->codec_id);
+
+  (void)type; // TODO: temporary cast to void to avoid unused-parameter warning
+
+  *dec_ctx = avcodec_alloc_context3(dec);
+  ret = avcodec_parameters_to_context(*dec_ctx, str->codecpar);
+  ret = avcodec_open2(*dec_ctx, dec, NULL);
+}

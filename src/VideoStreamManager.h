@@ -45,11 +45,12 @@ public:
   VideoStreamManager&& operator=(VideoStreamManager&&) = delete;
 
 private:
+  void open_codec_context(int str_idx, AVCodecContext **dec_ctx, enum AVMediaType type);
+
   // ffmpeg utilities for reading file and decoding video/audio 
   AVFormatContext* fmt_ctx{nullptr};
   AVCodecContext* dec_ctx{nullptr};
   const AVCodec* dec{nullptr};
-  AVStream* vid_str{nullptr};
   AVFrame* frame{nullptr};
   AVPacket* packet{nullptr};
   SwsContext *sws_ctx{nullptr};
@@ -66,7 +67,6 @@ private:
   int src_linesize[4];
   int src_width;
   int src_height;
-
 
   int vid_str_idx;
 };
